@@ -10,15 +10,15 @@ import Foundation
 import BigInt
 
 public struct RLP {
-    enum Error: Swift.Error {
+    public enum Error: Swift.Error {
         case encodingError
         case decodingError
     }
 
-    static var length56 = BigUInt(UInt(56))
-    static var lengthMax = (BigUInt(UInt(1)) << 256)
+    public static var length56 = BigUInt(UInt(56))
+    public static var lengthMax = (BigUInt(UInt(1)) << 256)
 
-    internal static func encode(element: Any?) -> Data? {
+    public static func encode(element: Any?) -> Data? {
         if let string = element as? String {
             return encode(string)
         } else if let data = element as? Data {
@@ -29,7 +29,7 @@ public struct RLP {
         return nil
     }
 
-    internal static func encode(_ string: String) -> Data? {
+    public static func encode(_ string: String) -> Data? {
         if let hexData = Data.fromHex(string) {
             return encode(hexData)
         }
@@ -37,23 +37,23 @@ public struct RLP {
         return encode(data)
     }
 
-    internal static func encode(_ number: Int) -> Data? {
+    public static func encode(_ number: Int) -> Data? {
         guard number >= 0 else { return nil }
         let uint = UInt(number)
         return encode(uint)
     }
 
-    internal static func encode(_ number: UInt) -> Data? {
+    public static func encode(_ number: UInt) -> Data? {
         let biguint = BigUInt(number)
         return encode(biguint)
     }
 
-    internal static func encode(_ number: BigUInt) -> Data? {
+    public static func encode(_ number: BigUInt) -> Data? {
         let encoded = number.serialize()
         return encode(encoded)
     }
 
-    internal static func encode(_ data: Data) -> Data? {
+    public static func encode(_ data: Data) -> Data? {
         if data.count == 1 && data.bytes[0] < UInt8(0x80) {
             return data
         } else {
@@ -65,7 +65,7 @@ public struct RLP {
         }
     }
 
-    internal static func encodeLength(_ length: Int, offset: UInt8) -> Data? {
+    public static func encodeLength(_ length: Int, offset: UInt8) -> Data? {
         if length < 0 {
             return nil
         }
@@ -73,7 +73,7 @@ public struct RLP {
         return encodeLength(bigintLength, offset: offset)
     }
 
-    internal static func encodeLength(_ length: BigUInt, offset: UInt8) -> Data? {
+    public static func encodeLength(_ length: BigUInt, offset: UInt8) -> Data? {
         if length < length56 {
             let encodedLength = length + BigUInt(UInt(offset))
             guard encodedLength.bitWidth <= 8 else { return nil }
@@ -90,7 +90,7 @@ public struct RLP {
         return nil
     }
 
-    internal static func lengthToBinary(_ length: BigUInt) -> UInt8? {
+    public static func lengthToBinary(_ length: BigUInt) -> UInt8? {
         if length == 0 {
             return UInt8(0)
         }
@@ -111,7 +111,7 @@ public struct RLP {
         return encoded.bytes[0]
     }
 
-    internal static func encode(_ elements: [Any?]) -> Data? {
+    public static func encode(_ elements: [Any?]) -> Data? {
         var encodedData = Data()
         for e in elements {
             if let encoded = encode(element: e) {
@@ -129,12 +129,12 @@ public struct RLP {
         return encodedLength
     }
 
-    internal static func decode(_ raw: String) -> RLPItem? {
+    public static func decode(_ raw: String) -> RLPItem? {
         guard let rawData = Data.fromHex(raw) else { return nil }
         return decode(rawData)
     }
 
-    internal static func decode(_ raw: Data) -> RLPItem? {
+    public static func decode(_ raw: Data) -> RLPItem? {
         if raw.count == 0 {
             return RLPItem.noItem
         }
@@ -169,7 +169,7 @@ public struct RLP {
 
     public struct RLPItem {
 
-        enum UnderlyingType {
+        public enum UnderlyingType {
             case empty
             case data
             case list
@@ -241,7 +241,7 @@ public struct RLP {
         }
     }
 
-    internal static func decodeLength(_ input: Data) -> (offset: BigUInt?, length: BigUInt?, type: RLPItem.UnderlyingType?) {
+    public static func decodeLength(_ input: Data) -> (offset: BigUInt?, length: BigUInt?, type: RLPItem.UnderlyingType?) {
         do {
             let length = BigUInt(input.count)
             if length == BigUInt(0) {
@@ -272,19 +272,19 @@ public struct RLP {
         }
     }
 
-    internal static func slice(data: Data, offset: BigUInt, length: BigUInt) throws -> Data {
+    public static func slice(data: Data, offset: BigUInt, length: BigUInt) throws -> Data {
         if BigUInt(data.count) < offset + length {throw Error.encodingError}
         let slice = data[UInt64(offset) ..< UInt64(offset + length)]
         return Data(slice)
     }
 
-    internal static func slice(data: Data, start: BigUInt) throws -> Data {
+    public static func slice(data: Data, start: BigUInt) throws -> Data {
         if BigUInt(data.count) < start {throw Error.encodingError}
         let slice = data[UInt64(start) ..< UInt64(data.count)]
         return Data(slice)
     }
 
-    internal static func toBigUInt(_ raw: Data) throws -> BigUInt {
+    public static func toBigUInt(_ raw: Data) throws -> BigUInt {
         if raw.count == 0 {
             throw Error.encodingError
         } else if raw.count == 1 {
@@ -300,5 +300,80 @@ fileprivate extension Data {
 
     var bytes: [UInt8] {
         return Array(self)
+    }
+    
+    static func fromHex(_ hex: String) -> Data? {
+        let string = hex.lowercased().stripHexPrefix()
+        let array = [UInt8](hex: string)
+        if array.count == 0 {
+            if hex == "0x" || hex == "" {
+                return Data()
+            } else {
+                return nil
+            }
+        }
+        return Data(array)
+    }
+}
+
+
+fileprivate extension String {
+    func stripHexPrefix() -> String {
+        if self.hasPrefix("0x") {
+            let indexStart = self.index(self.startIndex, offsetBy: 2)
+            return String(self[indexStart...])
+        }
+        return self
+    }
+}
+
+fileprivate extension Array where Element == UInt8 {
+    init(hex: String) {
+        self.init()
+        self.reserveCapacity(hex.unicodeScalars.lazy.underestimatedCount)
+        var buffer: UInt8?
+        var skip = hex.hasPrefix("0x") ? 2 : 0
+        for char in hex.unicodeScalars.lazy {
+            guard skip == 0 else {
+                skip -= 1
+                continue
+            }
+            guard char.value >= 48 && char.value <= 102 else {
+                removeAll()
+                return
+            }
+            let v: UInt8
+            let c: UInt8 = UInt8(char.value)
+            switch c {
+            case let c where c <= 57:
+                v = c - 48
+            case let c where c >= 65 && c <= 70:
+                v = c - 55
+            case let c where c >= 97:
+                v = c - 87
+            default:
+                removeAll()
+                return
+            }
+            if let b = buffer {
+                append(b << 4 | v)
+                buffer = nil
+            } else {
+                buffer = v
+            }
+        }
+        if let b = buffer {
+            append(b)
+        }
+    }
+
+    func toHexString() -> String {
+        return `lazy`.reduce("") {
+            var s = String($1, radix: 16)
+            if s.count == 1 {
+                s = "0" + s
+            }
+            return $0 + s
+        }
     }
 }

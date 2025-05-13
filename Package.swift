@@ -9,7 +9,8 @@ let package = Package(
         .macOS(.v10_15), .iOS(.v13)
     ],
     products: [
-        .library(name: "web3swift", targets: ["web3swift"])
+        .library(name: "web3swift", targets: ["web3swift"]),
+        .library(name: "RLP", targets: ["RLP"])
     ],
     dependencies: [
         .package(url: "https://github.com/attaswift/BigInt.git", from: "5.3.0"),
@@ -19,13 +20,15 @@ let package = Package(
     targets: [
         .target(
             name: "web3swift",
-            dependencies: ["BigInt", "Secp256k1Swift", "CryptoSwift"],
+            dependencies: ["BigInt", "Secp256k1Swift", "CryptoSwift", "RLP"],
             resources: [
                 .copy("./Browser/browser.js"),
                 .copy("./Browser/browser.min.js"),
                 .copy("./Browser/wk.bridge.min.js")
             ]
         ),
+        .target(name: "RLP",
+                dependencies: ["BigInt"]),
         .testTarget(
             name: "localTests",
             dependencies: ["web3swift"],

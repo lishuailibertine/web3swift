@@ -9,7 +9,7 @@
 import Foundation
 import CryptoSwift
 import BigInt
-
+import RLP
 public struct EthereumAddress: Equatable {
     public enum AddressType {
         case normal

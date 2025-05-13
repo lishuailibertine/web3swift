@@ -6,7 +6,7 @@
 
 import Foundation
 import BigInt
-
+import RLP
 public struct EIP2930Envelope: EIP2718Envelope, EIP2930Compatible {
     public let type: TransactionType = .eip2930
 
